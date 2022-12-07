@@ -22,7 +22,6 @@ signal refr_tick: std_logic;
 
 -- x, y coordinates (0,0 to (639, 479)
 signal pix_x, pix_y: unsigned(9 downto 0);
-signal pix_x_2, pix_y_2: unsigned(9 downto 0);
 
 -- Screen dimensions
 constant MAX_X: integer := 640;
@@ -46,16 +45,16 @@ constant BAR_V: integer:= 4;
 
 -- Square ball -- ball left, right, top and bottom all vary. Left and top driven by registers below.
 constant BALL_SIZE: integer := 8;
-signal ball_x_l, ball_x_r: unsigned(9 downto 0);
-signal ball_x_2_l, ball_x_2_r: unsigned(9 downto 0);
-signal ball_y_t, ball_y_b: unsigned(9 downto 0);
-signal ball_y_2_t, ball_y_2_b: unsigned(9 downto 0);
+signal bar_left_1, bar_right_1: unsigned(9 downto 0);
+signal bar_left_2, bar_right_2: unsigned(9 downto 0);
+signal bar_top_1, bar_bottom_1: unsigned(9 downto 0);
+signal bar_top_2, bar_bottom_2: unsigned(9 downto 0);
 
 -- Reg to track left and top boundary
-signal ball_x_reg, ball_x_next: unsigned (9 downto 0);
-signal ball_x_2_reg, ball_x_2_next: unsigned (9 downto 0);
-signal ball_y_reg, ball_y_next: unsigned (9 downto 0);
-signal ball_y_2_reg, ball_y_2_next: unsigned (9 downto 0);
+signal bar_x_1_reg, bar_x_1_next: unsigned (9 downto 0);
+signal bar_x_2_reg, bar_x_2_next: unsigned (9 downto 0);
+signal bar_y_1_reg, bar_y_1_next: unsigned (9 downto 0);
+signal bar_y_2_reg, bar_y_2_next: unsigned (9 downto 0);
 
 -- reg to track ball speed
 signal x_delta_reg, x_delta_next: integer := 0; --Speed of ball going left to right (Carlos)
@@ -64,7 +63,7 @@ signal y_delta_reg, y_delta_next: integer := 2; --Speed of ball going top to bot
 signal y_delta_2_reg, y_delta_2_next: integer := 2;
 
 -- ball movement can be pos or neg
-constant BALL_V_P: unsigned(9 downto 0):= to_unsigned(2,10);
+constant BALL_V_P: unsigned(9 downto 0):= to_unsigned(-1, 10);
 constant BALL_V_N: unsigned(9 downto 0):= unsigned(to_signed(-2,10));
 
 
@@ -422,10 +421,10 @@ process (clk, reset)
 	begin
 	if (reset = '1') then
 		bar_y_reg <= 400;
-		ball_x_reg <= ("0001110000");
-		ball_x_2_reg <= ("0011110000");
-		ball_y_reg <= ("0000100000");
-		ball_y_2_reg <= ("0000100000");
+		bar_x_1_reg <= ("0001110000");
+		bar_x_2_reg <= ("0011110000");
+		bar_y_1_reg <= ("0000100000");
+		bar_y_2_reg <= ("0000100000");
 		x_delta_reg <= x_delta_next;
 		x_delta_2_reg <= x_delta_next;
 		y_delta_reg <= y_delta_next;
@@ -434,10 +433,10 @@ process (clk, reset)
 		score_reg <= 0;
 	elsif (clk'event and clk = '1') then
 		bar_y_reg <= bar_y_next;
-		ball_x_reg <= ball_x_next;
-		ball_x_2_reg <= ball_x_2_next;
-		ball_y_reg <= ball_y_next;
-		ball_y_2_reg <= ball_y_2_next;
+		bar_x_1_reg <= bar_x_1_next;
+		bar_x_2_reg <= bar_x_2_next;
+		bar_y_1_reg <= bar_y_1_next;
+		bar_y_2_reg <= bar_y_2_next;
 		x_delta_reg <= x_delta_next;
 		x_delta_2_reg <= x_delta_2_next;
 		y_delta_reg <= y_delta_next;
@@ -449,9 +448,7 @@ end process;
 
 -- ======================================================================================================
 pix_x <= unsigned(pixel_x);
-pix_x_2 <= unsigned(pixel_2_x);
 pix_y <= unsigned(pixel_y);
-pix_y_2 <= unsigned(pixel_2_y);
 
 -- Refr_tick: 1-clock tick asserted at start of v_sync, e.g., when the screen is refreshed -- speed is 60 Hz
 refr_tick <= '1' when (pix_y = 1) and (pix_x = 1) else '0';
@@ -485,31 +482,31 @@ end process;
 
 -- ======================================================================================================
 -- set coordinates of square ball.
-ball_x_l <= ball_x_reg;
-ball_x_2_l <= ball_x_2_reg;
-ball_y_t <= ball_y_reg;
-ball_y_2_t <= ball_y_2_reg;
-ball_x_r <= ball_x_l + BALL_SIZE - 1;
-ball_x_2_r <= ball_x_2_l + BALL_SIZE - 1;
-ball_y_b <= ball_y_t + BALL_SIZE - 1;
-ball_y_2_b <= ball_y_2_t + BALL_SIZE - 1;
+bar_left_1 <= bar_x_1_reg;
+bar_left_2 <= bar_x_2_reg;
+bar_top_1 <= bar_y_1_reg;
+bar_top_2 <= bar_y_2_reg;
+bar_right_1 <= bar_left_1 + BALL_SIZE - 1;
+bar_right_2 <= bar_left_2 + BALL_SIZE - 1;
+bar_bottom_1 <= bar_top_1 + BALL_SIZE - 1;
+bar_bottom_2 <= bar_top_2 + BALL_SIZE - 1;
 
 -- pixel within square ball
-sq_ball_on <= '1' when (ball_x_l <= pix_x) and (pix_x <= ball_x_r) and (ball_y_t <= pix_y) and (pix_y <= ball_y_b) else '0';
-sq_ball_on_2 <= '1' when (ball_x_2_l <= pix_x_2) and (pix_x_2 <= ball_x_2_r) and (ball_y_2_t <= pix_y_2) and (pix_y_2 <= ball_y_2_b) else '0';
+sq_ball_on <= '1' when (bar_left_1 <= pix_x) and (pix_x <= bar_right_1) and (bar_top_1 <= pix_y) and (pix_y <= bar_bottom_1) else '0';
+sq_ball_on_2 <= '1' when (bar_left_2 <= pix_x_2) and (pix_x_2 <= bar_right_2) and (bar_top_2 <= pix_y_2) and (pix_y_2 <= bar_bottom_2) else '0';
 
 -- Map scan coord to ROM addr/col -- use low order three bits of pixel and ball positions. ROM row
-rom_addr <= pix_y(2 downto 0) - ball_y_t(2 downto 0);
+rom_addr <= pix_y(2 downto 0) - bar_top_1(2 downto 0);
 
 -- ROM column
-rom_col <= pix_x(2 downto 0) - ball_x_l(2 downto 0);
+rom_col <= pix_x(2 downto 0) - bar_left_1(2 downto 0);
 
 -- Get row data
 rom_data <= BALL_ROM(to_integer(rom_addr));
 
 -- Get column bit
 rom_bit <= rom_data(to_integer(rom_col));
-ball_y <= ball_y_reg;
+ball_y <= bar_y_1_reg;
 bar_y <= bar_y_reg;
 
 	
@@ -519,14 +516,14 @@ rd_ball_on_2 <= '1' when (sq_ball_on_2 = '1') and (rom_bit = '1') else '0';
 ball_rgb <= "001"; -- red
 
 -- Update the ball position 60 times per second.
-ball_y_next <= ball_y_reg + y_delta_reg when refr_tick = '1' else ball_y_reg;
-ball_y_2_next <= ball_y_2_reg + y_delta_2_reg when refr_tick = '1' else ball_y_2_reg;
-ball_x_next <= ball_x_reg + x_delta_reg when refr_tick = '1' else ball_x_reg;
-ball_x_2_next <= ball_x_2_reg + x_delta_2_reg when refr_tick = '1' else ball_x_2_reg;
+bar_y_1_next <= bar_y_1_reg + y_delta_reg when refr_tick = '1' else bar_y_1_reg;
+bar_y_2_next <= bar_y_2_reg + y_delta_2_reg when refr_tick = '1' else bar_y_2_reg;
+bar_x_1_next <= bar_x_1_reg + x_delta_reg when refr_tick = '1' else bar_x_1_reg;
+bar_x_2_next <= bar_x_2_reg + x_delta_2_reg when refr_tick = '1' else bar_x_2_reg;
 
 -- Set the value of the next ball position according to the boundaries.
-process(x_delta_reg, y_delta_reg, ball_y_t, ball_x_l, ball_x_r, ball_y_t, ball_y_b, bar_y_t, bar_y_b,
-x_delta_2_reg, y_delta_2_reg, ball_y_2_t, ball_x_2_l, ball_x_r, ball_y_2_t, ball_y_2_b)
+process(x_delta_reg, y_delta_reg, bar_top_1, bar_left_1, bar_right_1, bar_top_1, bar_bottom_1, bar_y_t, bar_y_b,
+x_delta_2_reg, y_delta_2_reg, bar_top_2, bar_left_2, bar_right_1, bar_top_2, bar_bottom_2)
 	begin
 	x_delta_next <= x_delta_reg;
 	x_delta_2_next <= x_delta_2_reg;
@@ -534,22 +531,22 @@ x_delta_2_reg, y_delta_2_reg, ball_y_2_t, ball_x_2_l, ball_x_r, ball_y_2_t, ball
 	y_delta_next <= y_delta_2_reg;
 
 -- Ball reached top, make offset positive
-	if ( ball_y_t < 1 ) then 
+	if ( bar_top_1 < 1 ) then 
 	y_delta_next <= y_delta_reg;
 
 -- Reached bottom, make negative
-	elsif (ball_y_b > (MAX_Y - 1)) then 
+	elsif (bar_bottom_1 > (MAX_Y - 1)) then 
 	y_delta_next <= y_delta_reg;
 
 -- Reach wall, bounce back
-	elsif (ball_x_l <= WALL_X_R ) then 
+	elsif (bar_left_1 <= WALL_X_R ) then 
 	x_delta_next <= x_delta_reg; 
 
 -- Right corner of ball inside bar
-	elsif ((BAR_X_L <= ball_x_r) and (ball_x_r <= BAR_X_R)) then
+	elsif ((BAR_X_L <= bar_right_1) and (bar_right_1 <= BAR_X_R)) then
 
 -- Some portion of ball hitting paddle, reverse direction
-	if ((bar_y_t <= ball_y_b) and (ball_y_t <= bar_y_b)) then
+	if ((bar_y_t <= bar_bottom_1) and (bar_top_1 <= bar_y_b)) then
 		x_delta_next <= x_delta_reg; 
 	end if;
 	end if;
