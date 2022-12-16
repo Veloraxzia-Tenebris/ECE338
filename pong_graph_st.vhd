@@ -109,7 +109,7 @@ signal block_pixel3 : STD_LOGIC;
 --   X   X
 --   X   X
 --   XXXXX
-type score_type is array(0 to 13) of std_logic_vector(0 to 9);
+type score_type is array (0 to 13) of std_logic_vector (0 to 9);
 constant zero : score_type := (	"1111111111",
 							"1111111111",
 							"1100000011",
@@ -343,7 +343,7 @@ signal score_left, score_right, score_top, score_bottom : UNSIGNED (9 downto 0);
 --	Vertical
 signal score_address, score_column : UNSIGNED (3 downto 0);
 --	Horizontal
-signal score_data : STD_LOGIC_VECTOR (10 downto 0);
+signal score_data : STD_LOGIC_VECTOR (9 downto 0);
 --	If score is displayed on pixel or not
 signal score_bit : STD_LOGIC;
 --	If in score's bounding box
@@ -352,12 +352,17 @@ signal in_score : STD_LOGIC;
 signal score_rgb : STD_LOGIC_VECTOR (2 downto 0);
 --	Score display pixel
 signal score_pixel : STD_LOGIC;
+--	Score block detection
+constant DETECT_HEIGHT : INTEGER := 440;
+constant DETECT_THICKNESS : INTEGER := 40;
 
 -- Time counter
 --	Counts every 1/60th of a second
 signal timer60th_reg, timer60th_next : INTEGER := 0;
 --	Counts every 1/10th of a second
 signal timer10th_reg, timer10th_next : INTEGER := 0;
+constant TIMESIX : INTEGER := 6;
+constant TIMETEN : INTEGER := 63;
 
 -- Lane lines
 constant LANE_LEFT : INTEGER := 100;
@@ -368,7 +373,7 @@ signal lane_rgb : STD_LOGIC_VECTOR (2 downto 0);
 
 -- Lane rhythms
 type rhythm_type is array(0 to 63) of STD_LOGIC;
-constant lane_rhythm1 : rhythm_type := ('1', '0', '0', '0', '0', '0', '0', '0',
+signal lane_rhythm1 : rhythm_type := ('1', '0', '0', '0', '0', '0', '0', '0',
 								'0', '0', '0', '1', '0', '0', '0', '0',
 								'0', '0', '0', '0', '0', '0', '0', '0',
 								'0', '0', '0', '0', '0', '1', '0', '0',
@@ -376,7 +381,7 @@ constant lane_rhythm1 : rhythm_type := ('1', '0', '0', '0', '0', '0', '0', '0',
 								'0', '0', '0', '1', '0', '0', '0', '0',
 								'0', '0', '0', '0', '0', '1', '0', '0',
 								'0', '0', '1', '0', '0', '0', '0', '0');
-constant lane_rhythm2 : rhythm_type := ('0', '0', '1', '0', '0', '0', '0', '0',
+signal lane_rhythm2 : rhythm_type := ('0', '0', '1', '0', '0', '0', '0', '0',
 								'0', '0', '0', '1', '0', '0', '0', '0',
 								'0', '0', '0', '0', '0', '1', '0', '0',
 								'0', '0', '1', '0', '0', '0', '0', '0',
@@ -384,7 +389,7 @@ constant lane_rhythm2 : rhythm_type := ('0', '0', '1', '0', '0', '0', '0', '0',
 								'0', '0', '0', '1', '0', '0', '0', '0',
 								'0', '0', '1', '0', '0', '0', '0', '0',
 								'0', '0', '0', '0', '1', '0', '0', '0');
-constant lane_rhythm3 : rhythm_type := ('0', '0', '0', '0', '0', '1', '0', '0',
+signal lane_rhythm3 : rhythm_type := ('0', '0', '0', '0', '0', '1', '0', '0',
 								'0', '0', '0', '0', '0', '1', '0', '0',
 								'0', '0', '0', '0', '0', '0', '1', '0',
 								'0', '0', '1', '0', '0', '0', '0', '0',
@@ -483,6 +488,67 @@ block_pixel3 <= '1' when (in_block3 = '1') and (block_bit3 = '1')
 -- Change in future for different colours
 block_rgb <= "111";
 
+-- Block downwards movement
+-- Update the block position for movement
+block_top_next1 <= block_top_reg1 + block_speed when refr_tick = '1' else block_top_reg1;
+block_left_next1 <= block_left_reg1 when refr_tick = '1' else block_left_reg1;
+
+-- Timer incrementation
+timer60th_next <= timer60th_reg + 1 when refr_tick = '1' else timer60th_reg;
+timer10th_next <= timer10th_reg + 1 when timer60th_reg = 6 else timer10th_reg;
+
+-- Tick counter block (60 bps)
+process(block_top1, block_top2, block_top3, block_speed, refr_tick, block_top_reg1, block_left_reg1,
+	   block_top_reg2, block_left_reg2, block_top_reg3, block_left_reg3, timer60th_reg, timer10th_reg, lane_rhythm1, lane_rhythm2, lane_rhythm3, btn)
+	begin
+	-- If block reaches bottom of screen, hold block somewhere offscreen till next call
+	if(block_top1 > (MAX_Y - 1)) then
+		block_top_next1 <= TO_UNSIGNED(MAX_Y + 20, 10);
+	end if;
+	-- Second block
+	if(block_top2 > (MAX_Y - 1)) then
+		block_top_next2 <= TO_UNSIGNED(MAX_Y + 20, 10);
+	end if;
+	-- Third block
+	if(block_top3 > (MAX_Y - 1)) then
+		block_top_next3 <= TO_UNSIGNED(MAX_Y + 20, 10);
+	end if;
+
+	-- Block rhythm patterns
+	if(lane_rhythm1(timer10th_reg) = '1') then
+		block_top_next1 <= TO_UNSIGNED(0, 10);
+	end if;
+	-- Second block
+	if(lane_rhythm2(timer10th_reg) = '1') then
+		block_top_next2 <= TO_UNSIGNED(0, 10);
+	end if;
+	-- Third block
+	if(lane_rhythm3(timer10th_reg) = '1') then
+		block_top_next3 <= TO_UNSIGNED(0, 10);
+	end if;
+
+	-- Score detection
+	if((block_top1 > (DETECT_HEIGHT + DETECT_THICKNESS)) and (block_top1 < DETECT_HEIGHT) and btn(0) = '1') then
+		score_next <= score_reg + 1;
+	end if;
+	-- Second block
+	if((block_top2 > (DETECT_HEIGHT + DETECT_THICKNESS)) and (block_top2 < DETECT_HEIGHT) and btn(1) = '1') then
+		score_next <= score_reg + 1;
+	end if;
+	-- Third block
+	if((block_top3 > (DETECT_HEIGHT + DETECT_THICKNESS)) and (block_top3 < DETECT_HEIGHT) and btn(2) = '1') then
+		score_next <= score_reg + 1;
+	end if;
+
+	-- Timer looparound
+	if(timer60th_reg = TIMESIX) then
+		timer60th_next <= 0;
+	end if;
+	if(timer10th_reg = TIMETEN) then
+		timer10th_next <= 0;
+	end if;
+end process;
+
 --			If broken, add a '-1' to the end of the right and bottom
 -- Set score bounding box sides
 score_left <= TO_UNSIGNED(SCORE_X_OFFSET, 10);
@@ -511,53 +577,6 @@ score_pixel <= '1' when (in_score = '1') and (score_bit = '1')
 -- Set colour to white
 score_rgb <= "111";
 
--- Tick counter block (60 bps)
-process(block_top1, block_top2, block_top3, block_speed, refr_tick, block_top_reg1, block_left_reg1, block_top_reg2, block_left_reg2, block_top_reg3, block_left_reg3, timer60th_reg, timer10th_reg, lane_rhythm1, lane_rhythm2, lane_rhythm3)
-	begin
-	-- Block downwards movement
-	-- Update the block position for movement
-	block_top_next1 <= block_top_reg1 + block_speed when refr_tick = '1' else block_top_reg1;
-	block_left_next1 <= block_left_reg1 when refr_tick = '1' else block_left_reg1;
-
-	-- Timer incrementation
-	timer60th_next <= timer60th_reg + 1 when refr_tick = '1' else timer60th_reg;
-	timer10th_next <= timer10th_reg + 1 when timer60th_reg = 6 else timer10th_reg;
-
-	-- If block reaches bottom of screen, hold block somewhere offscreen till next call
-	if(block_top1 > (MAX_Y - 1)) then
-		block_top_next1 <= TO_UNSIGNED(MAX_Y + 20, 10);
-	end if;
-	-- Second block
-	if(block_top2 > (MAX_Y - 1)) then
-		block_top_next2 <= TO_UNSIGNED(MAX_Y + 20, 10);
-	end if;
-	-- Third block
-	if(block_top3 > (MAX_Y - 1)) then
-		block_top_next3 <= TO_UNSIGNED(MAX_Y + 20, 10);
-	end if;
-
-	-- Block rhythm patterns
-	if(lane_rhythm1(timer10th_reg) = '1') then
-		block_top_next1 <= TO_UNSIGNED(0, 10);
-	end if;
-	-- Second block
-	if(lane_rhythm2(timer10th_reg) = '1') then
-		block_top_next2 <= TO_UNSIGNED(0, 10);
-	end if;
-	-- Third block
-	if(lane_rhythm3(timer10th_reg) = '1') then
-		block_top_next3 <= TO_UNSIGNED(0, 10);
-	end if;
-
-	-- Timer looparound
-	if(timer60th_reg = 6) then
-		timer60th_next <= 0;
-	end if;
-	if(timer10th_reg = 63) then
-		timer10th_next <= 0;
-	end if;
-end process;
-
 -- Display lane
 lane_pixel <= '1' when ((LANE_LEFT <= pix_x) and (pix_x <= (LANE_LEFT + LANE_LINE_THICKNESS))) or
 				   (((LANE_LEFT + LANE_WIDTH) <= pix_x) and (pix_x <= (LANE_LEFT + LANE_WIDTH + LANE_LINE_THICKNESS))) or
@@ -580,7 +599,7 @@ process(video_on, block_rgb, score_rgb, block_pixel1, block_pixel2, block_pixel3
 			graph_rgb <= block_rgb;
 		elsif(block_pixel3 = '1') then
 			graph_rgb <= block_rgb;
-		elsif(lane_pixel - '1') then
+		elsif(lane_pixel = '1') then
 			graph_rgb <= lane_rgb;
 		else
 			graph_rgb <= "000";
