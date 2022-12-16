@@ -490,10 +490,10 @@ block_rgb <= "111";
 
 -- Timer incrementation
 timer60th_next <= timer60th_reg + 1 when refr_tick = '1'
-			   0 when timer60th_reg = 6
+			   else 0 when timer60th_reg = 6
 			   else timer60th_reg;
 timer10th_next <= timer10th_reg + 1 when timer60th_reg = 5
-			   0 when timer10th_reg = 63
+			   else 0 when timer10th_reg = 63
 			   else timer10th_reg;
 
 -- Tick counter block (60 bps)
@@ -508,7 +508,11 @@ process(block_top1, block_top2, block_top3, block_speed, refr_tick, block_top_re
 	elsif(lane_rhythm1(timer10th_reg) = '1') then
 		block_top_next1 <= TO_UNSIGNED(0, 10);
 	else
-		block_top_next1 <= block_top_reg1 + block_speed when refr_tick = '1' else block_top_reg1;
+		if(refr_tick = '1') then
+			block_top_next1 <= block_top_reg1 + block_speed;
+		else
+			block_top_next1 <= block_top_reg1;
+		end if;
 	end if;
 	-- Second block
 	if(block_top2 > (MAX_Y - 1)) then
@@ -516,7 +520,11 @@ process(block_top1, block_top2, block_top3, block_speed, refr_tick, block_top_re
 	elsif(lane_rhythm2(timer10th_reg) = '1') then
 		block_top_next2 <= TO_UNSIGNED(0, 10);
 	else
-		block_top_next2 <= block_top_reg2 + block_speed when refr_tick = '1' else block_top_reg2;
+		if(refr_tick = '1') then
+			block_top_next2 <= block_top_reg2 + block_speed;
+		else
+			block_top_next2 <= block_top_reg2;
+		end if;
 	end if;
 	-- Third block
 	if(block_top3 > (MAX_Y - 1)) then
@@ -524,7 +532,11 @@ process(block_top1, block_top2, block_top3, block_speed, refr_tick, block_top_re
 	elsif(lane_rhythm3(timer10th_reg) = '1') then
 		block_top_next3 <= TO_UNSIGNED(0, 10);
 	else
-		block_top_next3 <= block_top_reg3 + block_speed when refr_tick = '1' else block_top_reg3;
+		if(refr_tick = '1') then
+			block_top_next3 <= block_top_reg3 + block_speed;
+		else
+			block_top_next3 <= block_top_reg3;
+		end if;
 	end if;
 
 	-- Score detection
