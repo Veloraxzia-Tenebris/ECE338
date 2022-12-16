@@ -367,6 +367,31 @@ signal lane_pixel : STD_LOGIC;
 signal lane_rgb : STD_LOGIC_VECTOR (2 downto 0);
 
 -- Lane rhythms
+type rhythm_type is array(0 to 63) of STD_LOGIC;
+constant lane_rhythm1 : rhythm_type := ('1', '0', '0', '0', '0', '0', '0', '0',
+								'0', '0', '0', '1', '0', '0', '0', '0',
+								'0', '0', '0', '0', '0', '0', '0', '0',
+								'0', '0', '0', '0', '0', '1', '0', '0',
+								'0', '0', '0', '0', '1', '0', '0', '0',
+								'0', '0', '0', '1', '0', '0', '0', '0',
+								'0', '0', '0', '0', '0', '1', '0', '0',
+								'0', '0', '1', '0', '0', '0', '0', '0');
+constant lane_rhythm2 : rhythm_type := ('0', '0', '1', '0', '0', '0', '0', '0',
+								'0', '0', '0', '1', '0', '0', '0', '0',
+								'0', '0', '0', '0', '0', '1', '0', '0',
+								'0', '0', '1', '0', '0', '0', '0', '0',
+								'0', '0', '0', '1', '0', '0', '0', '0',
+								'0', '0', '0', '1', '0', '0', '0', '0',
+								'0', '0', '1', '0', '0', '0', '0', '0',
+								'0', '0', '0', '0', '1', '0', '0', '0');
+constant lane_rhythm3 : rhythm_type := ('0', '0', '0', '0', '0', '1', '0', '0',
+								'0', '0', '0', '0', '0', '1', '0', '0',
+								'0', '0', '0', '0', '0', '0', '1', '0',
+								'0', '0', '1', '0', '0', '0', '0', '0',
+								'0', '0', '0', '1', '0', '0', '0', '0',
+								'0', '0', '0', '0', '0', '0', '1', '0',
+								'0', '0', '1', '0', '0', '0', '0', '0',
+								'0', '0', '0', '0', '0', '0', '1', '0');
 
 
 
@@ -509,6 +534,19 @@ process(block_top1, block_top2, block_top3, block_speed, refr_tick, block_top_re
 	-- Third block
 	if(block_top3 > (MAX_Y - 1)) then
 		block_top_next3 <= TO_UNSIGNED(MAX_Y + 20, 10);
+	end if;
+
+	-- Block rhythm patterns
+	if(lane_rhythm1(timer10th_reg)) then
+		block_top_next1 <= TO_UNSIGNED(0, 10);
+	end if;
+	-- Second block
+	if(lane_rhythm2(timer10th_reg)) then
+		block_top_next2 <= TO_UNSIGNED(0, 10);
+	end if;
+	-- Third block
+	if(lane_rhythm3(timer10th_reg)) then
+		block_top_next3 <= TO_UNSIGNED(0, 10);
 	end if;
 
 	-- Timer looparound
