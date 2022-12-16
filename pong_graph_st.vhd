@@ -331,6 +331,14 @@ signal score_pixel : STD_LOGIC;
 
 
 
+-- Time counter
+--	Counts every 1/60th of a second
+signal timer60th_reg, timer60th_next : INTEGER := 0;
+--	Counts every 1/10th of a second
+signal timer10th_reg, timer10th_next : INTEGER := 0;
+
+
+
 
 begin
 
@@ -341,10 +349,14 @@ process (clk, reset)
 		block_top_reg <= ("0001110000");
 		block_left_reg <= ("0001110000");
 		score_reg <= 0;
+		timer10th_reg <= 0;
+		timer60th_reg <= 0;
 	elsif (clk'event and clk = '1') then
 		score_reg <= score_next;
 		block_top_reg <= block_top_next;
 		block_left_reg <= block_left_next;
+		timer10th_reg <= timer10th_next;
+		timer60th_reg <= timer60th_next;
 	end if;
 end process;
 
@@ -419,12 +431,18 @@ score_rgb <= "111";
 
 
 
--- Block downwards movement
-process(block_top, block_speed, refr_tick, block_top_reg, block_left_reg)
+-- Tick counter block (60 bps)
+process(block_top, block_speed, refr_tick, block_top_reg, block_left_reg, timer10th_reg)
 	begin
+	-- Block downwards movement
 	-- Update the block position for movement
 	block_top_next <= block_top_reg + block_speed when refr_tick = '1' else block_top_reg;
 	block_left_next <= block_left_reg when refr_tick = '1' else block_left_reg;
+
+
+
+	-- Timer incrementation
+	timer10th_next <= timer10th_reg + 1 when refr_tick = '1' else timer10th_reg;
 
 
 
