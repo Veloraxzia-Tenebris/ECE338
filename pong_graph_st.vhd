@@ -8,7 +8,7 @@ entity pong_graph_st is
 	port(clk, reset: in std_logic;
 		btn: in std_logic_vector(1 downto 0);
 		video_on: in std_logic;
-		pixel_x, pixel_y, pixel_2_x, pixel_2_y: in std_logic_vector(9 downto 0);
+		pixel_x, pixel_y: in std_logic_vector(9 downto 0);
 		led: out std_logic_vector(1 downto 0);
 		graph_rgb: out std_logic_vector(2 downto 0));
 end pong_graph_st;
@@ -27,17 +27,25 @@ signal pix_x, pix_y: unsigned(9 downto 0);
 constant MAX_X: integer := 640;
 constant MAX_Y: integer := 480;
 
-
-
 -- Note block size, coordinates, and image ROM
 --	Bounding box size of block
 constant BLOCK_WIDTH : INTEGER := 32;
 constant BLOCK_HEIGHT : INTEGER := 4;
 --	Coordinates of bounding box sides
-signal block_left, block_right, block_top, block_bottom : UNSIGNED (9 downto 0);
+signal block_left1, block_right1, block_top1, block_bottom1 : UNSIGNED (9 downto 0);
+--	Second block
+signal block_left2, block_right2, block_top2, block_bottom2 : UNSIGNED (9 downto 0);
+--	Third block
+signal block_left3, block_right3, block_top3, block_bottom3 : UNSIGNED (9 downto 0);
 --	Registers for block top and block left
-signal block_left_reg, block_top_reg : UNSIGNED (9 downto 0);
-signal block_left_next, block_top_next : UNSIGNED (9 downto 0);
+signal block_left_reg1, block_top_reg1 : UNSIGNED (9 downto 0);
+signal block_left_next1, block_top_next1 : UNSIGNED (9 downto 0);
+--	Second block
+signal block_left_reg2, block_top_reg2 : UNSIGNED (9 downto 0);
+signal block_left_next2, block_top_next2 : UNSIGNED (9 downto 0);
+--	Third block
+signal block_left_reg3, block_top_reg3 : UNSIGNED (9 downto 0);
+signal block_left_next3, block_top_next3 : UNSIGNED (9 downto 0);
 --	Registers for block speed
 signal block_speed : INTEGER := 4;
 --	Block ROM
@@ -54,19 +62,35 @@ constant BLOCK_ROM : block_type := (	"00001111111111111111111111110000",
 
 -- Block address mapping
 --	Vertical
-signal block_address, block_column : UNSIGNED (1 downto 0);
+signal block_address1, block_column1 : UNSIGNED (1 downto 0);
 --	Horizontal
-signal block_data : STD_LOGIC_VECTOR (31 downto 0);
+signal block_data1 : STD_LOGIC_VECTOR (31 downto 0);
+--	Second block
+signal block_address2, block_column2 : UNSIGNED (1 downto 0);
+signal block_data2 : STD_LOGIC_VECTOR (31 downto 0);
+--	Third block
+signal block_address3, block_column3 : UNSIGNED (1 downto 0);
+signal block_data3 : STD_LOGIC_VECTOR (31 downto 0);
 --	If block is displayed on pixel or not
-signal block_bit : STD_LOGIC;
+signal block_bit1 : STD_LOGIC;
+--	Second block
+signal block_bit2 : STD_LOGIC;
+--	Third block
+signal block_bit3 : STD_LOGIC;
 --	If in block's bounding box
-signal in_block : STD_LOGIC;
+signal in_block1 : STD_LOGIC;
+--	Second block
+signal in_block2 : STD_LOGIC;
+--	Third block
+signal in_block3 : STD_LOGIC;
 --	Block colour
 signal block_rgb : STD_LOGIC_VECTOR (2 downto 0);
 --	Block display pixel
-signal block_pixel : STD_LOGIC;
-
-
+signal block_pixel1 : STD_LOGIC;
+--	Second block
+signal block_pixel2 : STD_LOGIC;
+--	Third block
+signal block_pixel3 : STD_LOGIC;
 
 -- For displaying numerical scores (Sonny)
 -- Using a grid that looks like this:
@@ -303,7 +327,7 @@ type score_array is array (0 to 9) of score_type;
 constant SCORE_ROM_ARRAY : score_array := (zero, one, two, three, four, five, six, seven, eight, nine);
 signal SCORE_ROM : score_type := zero;
 
--- Score counter (Sonny)
+-- Score counter
 signal score_reg, score_next : INTEGER := 0;
 
 -- Score size, coordinates, and image ROM
@@ -329,75 +353,110 @@ signal score_rgb : STD_LOGIC_VECTOR (2 downto 0);
 --	Score display pixel
 signal score_pixel : STD_LOGIC;
 
-
-
 -- Time counter
 --	Counts every 1/60th of a second
 signal timer60th_reg, timer60th_next : INTEGER := 0;
 --	Counts every 1/10th of a second
 signal timer10th_reg, timer10th_next : INTEGER := 0;
 
+-- Lane lines
+constant LANE_LEFT : INTEGER := 100;
+constant LANE_LINE_THICKNESS : INTEGER := 4;
+constant LANE_WIDTH : INTEGER := 48;
+signal lane_pixel : STD_LOGIC;
+signal lane_rgb : STD_LOGIC_VECTOR (2 downto 0);
+
+-- Lane rhythms
 
 
 
 begin
-
-
-process (clk, reset)
+process(clk, reset)
 	begin
 	if (reset = '1') then
-		block_top_reg <= ("0001110000");
-		block_left_reg <= ("0001110000");
+		block_top_reg1 <= ("0000000000");	-- 0
+		block_left_reg1 <= ("0001110000");	-- 112
+		block_top_reg2 <= ("0000000000");	-- 0
+		block_left_reg2 <= ("0010100100");	-- 164
+		block_top_reg3 <= ("0000000000");	-- 0
+		block_left_reg3 <= ("0011011000");	-- 216
 		score_reg <= 0;
 		timer10th_reg <= 0;
 		timer60th_reg <= 0;
 	elsif (clk'event and clk = '1') then
 		score_reg <= score_next;
-		block_top_reg <= block_top_next;
-		block_left_reg <= block_left_next;
+		block_top_reg1 <= block_top_next1;
+		block_left_reg1 <= block_left_next1;
+		block_top_reg2 <= block_top_next2;
+		block_left_reg2 <= block_left_next2;
+		block_top_reg3 <= block_top_next3;
+		block_left_reg3 <= block_left_next3;
 		timer10th_reg <= timer10th_next;
 		timer60th_reg <= timer60th_next;
 	end if;
 end process;
 
-
-
 pix_x <= unsigned(pixel_x);
 pix_y <= unsigned(pixel_y);
-
-
 
 -- Refr_tick: 1-clock tick asserted at start of v_sync, e.g., when the screen is refreshed -- speed is 60 Hz
 refr_tick <= '1' when (pix_y = 1) and (pix_x = 1) else '0';
 
-
-
 -- Set block bounding box sides
-block_left <= block_left_reg;
-block_top <= block_top_reg;
-block_right <= block_left + BLOCK_WIDTH - 1;
-block_bottom <= block_top + BLOCK_HEIGHT - 1;
+block_left1 <= block_left_reg1;
+block_top1 <= block_top_reg1;
+block_right1 <= block_left1 + BLOCK_WIDTH - 1;
+block_bottom1 <= block_top1 + BLOCK_HEIGHT - 1;
+-- Second block
+block_left2 <= block_left_reg2;
+block_top2 <= block_top_reg2;
+block_right2 <= block_left2 + BLOCK_WIDTH - 1;
+block_bottom2 <= block_top2 + BLOCK_HEIGHT - 1;
+-- Third block
+block_left3 <= block_left_reg3;
+block_top3 <= block_top_reg3;
+block_right3 <= block_left3 + BLOCK_WIDTH - 1;
+block_bottom3 <= block_top3 + BLOCK_HEIGHT - 1;
 
-	
-
--- If current pixel is inside the bounding box, make in_block true
-in_block <= '1' when (block_left <= pix_x) and (pix_x <= block_right) and
-				 (block_top <= pix_y) and (pix_y <= block_bottom)
+-- If current pixel is inside the bounding box, make in_block1 true
+in_block1 <= '1' when (block_left1 <= pix_x) and (pix_x <= block_right1) and
+				 (block_top1 <= pix_y) and (pix_y <= block_bottom1)
+				 else '0';
+-- Second block
+in_block2 <= '1' when (block_left2 <= pix_x) and (pix_x <= block_right2) and
+				 (block_top2 <= pix_y) and (pix_y <= block_bottom2)
+				 else '0';
+-- Third block
+in_block3 <= '1' when (block_left3 <= pix_x) and (pix_x <= block_right3) and
+				 (block_top3 <= pix_y) and (pix_y <= block_bottom3)
 				 else '0';
 
 -- Pixel to ROM address and column
 --	Vertical
-block_address <= pix_y (1 downto 0) - block_top (1 downto 0);
-block_data <= BLOCK_ROM(TO_INTEGER(block_address));
+block_address1 <= pix_y (1 downto 0) - block_top1 (1 downto 0);
+block_data1 <= BLOCK_ROM(TO_INTEGER(block_address1));
 --	Horizontal
-block_column <= pix_x (1 downto 0) - block_left (1 downto 0);
-block_bit <= block_data(TO_INTEGER(block_column));
-block_pixel <= '1' when (in_block = '1') and (block_bit = '1')
+block_column1 <= pix_x (1 downto 0) - block_left1 (1 downto 0);
+block_bit1 <= block_data1(TO_INTEGER(block_column1));
+block_pixel1 <= '1' when (in_block1 = '1') and (block_bit1 = '1')
+				  else '0';
+--	Second block
+block_address2 <= pix_y (1 downto 0) - block_top2 (1 downto 0);
+block_data2 <= BLOCK_ROM(TO_INTEGER(block_address2));
+block_column2 <= pix_x (1 downto 0) - block_left2 (1 downto 0);
+block_bit2 <= block_data2(TO_INTEGER(block_column2));
+block_pixel2 <= '1' when (in_block2 = '1') and (block_bit2 = '1')
+				  else '0';
+--	Third block
+block_address3 <= pix_y (1 downto 0) - block_top3 (1 downto 0);
+block_data3 <= BLOCK_ROM(TO_INTEGER(block_address3));
+block_column3 <= pix_x (1 downto 0) - block_left3 (1 downto 0);
+block_bit3 <= block_data3(TO_INTEGER(block_column3));
+block_pixel3 <= '1' when (in_block3 = '1') and (block_bit3 = '1')
 				  else '0';
 
 -- Change in future for different colours
 block_rgb <= "111";
-
 
 --			If broken, add a '-1' to the end of the right and bottom
 -- Set score bounding box sides
@@ -405,8 +464,6 @@ score_left <= TO_UNSIGNED(SCORE_X_OFFSET, 10);
 score_right <= TO_UNSIGNED(SCORE_X_OFFSET + SCORE_WIDTH, 10);
 score_top <= TO_UNSIGNED(SCORE_Y_OFFSET, 10);
 score_bottom <= TO_UNSIGNED(SCORE_Y_OFFSET + SCORE_HEIGHT, 10);
-
-
 
 -- If current pixel is inside the bounding box, make in_score true
 in_score <= '1' when (score_left <= pix_x) and (pix_x <= score_right) and
@@ -429,41 +486,64 @@ score_pixel <= '1' when (in_score = '1') and (score_bit = '1')
 -- Set colour to white
 score_rgb <= "111";
 
-
-
 -- Tick counter block (60 bps)
-process(block_top, block_speed, refr_tick, block_top_reg, block_left_reg, timer10th_reg)
+process(block_top1, block_top2, block_top3, block_speed, refr_tick, block_top_reg1, block_left_reg1, block_top_reg2, block_left_reg2, block_top_reg3, block_left_reg3, timer60th_reg, timer10th_reg)
 	begin
 	-- Block downwards movement
 	-- Update the block position for movement
-	block_top_next <= block_top_reg + block_speed when refr_tick = '1' else block_top_reg;
-	block_left_next <= block_left_reg when refr_tick = '1' else block_left_reg;
-
-
+	block_top_next1 <= block_top_reg1 + block_speed when refr_tick = '1' else block_top_reg1;
+	block_left_next1 <= block_left_reg1 when refr_tick = '1' else block_left_reg1;
 
 	-- Timer incrementation
-	timer10th_next <= timer10th_reg + 1 when refr_tick = '1' else timer10th_reg;
-
-
+	timer60th_next <= timer60th_reg + 1 when refr_tick = '1' else timer60th_reg;
+	timer10th_next <= timer10th_reg + 1 when timer60th_reg = 6 else timer10th_reg;
 
 	-- If block reaches bottom of screen, hold block somewhere offscreen till next call
-	if(block_top > (MAX_Y - 1)) then
-		block_top_next <= TO_UNSIGNED(MAX_Y + 20, 10);
+	if(block_top1 > (MAX_Y - 1)) then
+		block_top_next1 <= TO_UNSIGNED(MAX_Y + 20, 10);
+	end if;
+	-- Second block
+	if(block_top2 > (MAX_Y - 1)) then
+		block_top_next2 <= TO_UNSIGNED(MAX_Y + 20, 10);
+	end if;
+	-- Third block
+	if(block_top3 > (MAX_Y - 1)) then
+		block_top_next3 <= TO_UNSIGNED(MAX_Y + 20, 10);
+	end if;
+
+	-- Timer looparound
+	if(timer60th_reg = 6) then
+		timer60th_next <= 0;
+	end if;
+	if(timer10th_reg = 10) then
+		timer10th_next <= 0;
 	end if;
 end process;
 
-
+-- Display lane
+lane_pixel <= '1' when ((LANE_LEFT <= pix_x) and (pix_x <= (LANE_LEFT + LANE_LINE_THICKNESS))) or
+				   (((LANE_LEFT + LANE_WIDTH) <= pix_x) and (pix_x <= (LANE_LEFT + LANE_WIDTH + LANE_LINE_THICKNESS))) or
+				   (((LANE_LEFT + LANE_WIDTH + LANE_WIDTH) <= pix_x) and (pix_x <= (LANE_LEFT + LANE_WIDTH + LANE_WIDTH + LANE_LINE_THICKNESS))) or
+				   (((LANE_LEFT + LANE_WIDTH + LANE_WIDTH + LANE_WIDTH) <= pix_x) and (pix_x <= (LANE_LEFT + LANE_WIDTH + LANE_WIDTH + LANE_WIDTH + LANE_LINE_THICKNESS)))
+				   else '0';
+lane_rgb <= "011";
 
 -- Pixel display
-process(video_on, block_rgb, score_rgb, block_pixel, score_pixel)
+process(video_on, block_rgb, score_rgb, block_pixel1, block_pixel2, block_pixel3, score_pixel)
 	begin
-	if (video_on = '0') then
+	if(video_on = '0') then
 		graph_rgb <= "000";
 	else
-		if (block_pixel = '1') then
+		if(score_pixel = '1') then
 			graph_rgb <= score_rgb;
-		elsif (block_pixel = '1') then
+		elsif(block_pixel1 = '1') then
 			graph_rgb <= block_rgb;
+		elsif(block_pixel2 = '1') then
+			graph_rgb <= block_rgb;
+		elsif(block_pixel3 = '1') then
+			graph_rgb <= block_rgb;
+		elsif(lane_pixel - '1') then
+			graph_rgb <= lane_rgb;
 		else
 			graph_rgb <= "000";
 		end if;
