@@ -488,64 +488,54 @@ block_pixel3 <= '1' when (in_block3 = '1') and (block_bit3 = '1')
 -- Change in future for different colours
 block_rgb <= "111";
 
--- Block downwards movement
--- Update the block position for movement
-block_top_next1 <= block_top_reg1 + block_speed when refr_tick = '1' else block_top_reg1;
-block_left_next1 <= block_left_reg1 when refr_tick = '1' else block_left_reg1;
-
 -- Timer incrementation
-timer60th_next <= timer60th_reg + 1 when refr_tick = '1' else timer60th_reg;
-timer10th_next <= timer10th_reg + 1 when timer60th_reg = 6 else timer10th_reg;
+timer60th_next <= timer60th_reg + 1 when refr_tick = '1'
+			   0 when timer60th_reg = 6
+			   else timer60th_reg;
+timer10th_next <= timer10th_reg + 1 when timer60th_reg = 5
+			   0 when timer10th_reg = 63
+			   else timer10th_reg;
 
 -- Tick counter block (60 bps)
 process(block_top1, block_top2, block_top3, block_speed, refr_tick, block_top_reg1, block_left_reg1,
 	   block_top_reg2, block_left_reg2, block_top_reg3, block_left_reg3, timer60th_reg, timer10th_reg, lane_rhythm1, lane_rhythm2, lane_rhythm3, btn)
 	begin
+	-- Block downwards movement
+	-- Update the block position for movement
 	-- If block reaches bottom of screen, hold block somewhere offscreen till next call
 	if(block_top1 > (MAX_Y - 1)) then
 		block_top_next1 <= TO_UNSIGNED(MAX_Y + 20, 10);
+	elsif(lane_rhythm1(timer10th_reg) = '1') then
+		block_top_next1 <= TO_UNSIGNED(0, 10);
+	else
+		block_top_next1 <= block_top_reg1 + block_speed when refr_tick = '1' else block_top_reg1;
 	end if;
 	-- Second block
 	if(block_top2 > (MAX_Y - 1)) then
 		block_top_next2 <= TO_UNSIGNED(MAX_Y + 20, 10);
+	elsif(lane_rhythm2(timer10th_reg) = '1') then
+		block_top_next2 <= TO_UNSIGNED(0, 10);
+	else
+		block_top_next2 <= block_top_reg2 + block_speed when refr_tick = '1' else block_top_reg2;
 	end if;
 	-- Third block
 	if(block_top3 > (MAX_Y - 1)) then
 		block_top_next3 <= TO_UNSIGNED(MAX_Y + 20, 10);
-	end if;
-
-	-- Block rhythm patterns
-	if(lane_rhythm1(timer10th_reg) = '1') then
-		block_top_next1 <= TO_UNSIGNED(0, 10);
-	end if;
-	-- Second block
-	if(lane_rhythm2(timer10th_reg) = '1') then
-		block_top_next2 <= TO_UNSIGNED(0, 10);
-	end if;
-	-- Third block
-	if(lane_rhythm3(timer10th_reg) = '1') then
+	elsif(lane_rhythm3(timer10th_reg) = '1') then
 		block_top_next3 <= TO_UNSIGNED(0, 10);
+	else
+		block_top_next3 <= block_top_reg3 + block_speed when refr_tick = '1' else block_top_reg3;
 	end if;
 
 	-- Score detection
 	if((block_top1 > (DETECT_HEIGHT + DETECT_THICKNESS)) and (block_top1 < DETECT_HEIGHT) and btn(0) = '1') then
 		score_next <= score_reg + 1;
-	end if;
 	-- Second block
-	if((block_top2 > (DETECT_HEIGHT + DETECT_THICKNESS)) and (block_top2 < DETECT_HEIGHT) and btn(1) = '1') then
+	elsif((block_top2 > (DETECT_HEIGHT + DETECT_THICKNESS)) and (block_top2 < DETECT_HEIGHT) and btn(1) = '1') then
 		score_next <= score_reg + 1;
-	end if;
 	-- Third block
-	if((block_top3 > (DETECT_HEIGHT + DETECT_THICKNESS)) and (block_top3 < DETECT_HEIGHT) and btn(2) = '1') then
+	elsif((block_top3 > (DETECT_HEIGHT + DETECT_THICKNESS)) and (block_top3 < DETECT_HEIGHT) and btn(2) = '1') then
 		score_next <= score_reg + 1;
-	end if;
-
-	-- Timer looparound
-	if(timer60th_reg = TIMESIX) then
-		timer60th_next <= 0;
-	end if;
-	if(timer10th_reg = TIMETEN) then
-		timer10th_next <= 0;
 	end if;
 end process;
 
