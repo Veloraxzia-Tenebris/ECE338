@@ -512,7 +512,7 @@ score_pixel <= '1' when (in_score = '1') and (score_bit = '1')
 score_rgb <= "111";
 
 -- Tick counter block (60 bps)
-process(block_top1, block_top2, block_top3, block_speed, refr_tick, block_top_reg1, block_left_reg1, block_top_reg2, block_left_reg2, block_top_reg3, block_left_reg3, timer60th_reg, timer10th_reg)
+process(block_top1, block_top2, block_top3, block_speed, refr_tick, block_top_reg1, block_left_reg1, block_top_reg2, block_left_reg2, block_top_reg3, block_left_reg3, timer60th_reg, timer10th_reg, lane_rhythm1, lane_rhythm2, lane_rhythm3)
 	begin
 	-- Block downwards movement
 	-- Update the block position for movement
@@ -537,15 +537,15 @@ process(block_top1, block_top2, block_top3, block_speed, refr_tick, block_top_re
 	end if;
 
 	-- Block rhythm patterns
-	if(lane_rhythm1(timer10th_reg)) then
+	if(lane_rhythm1(timer10th_reg) = '1') then
 		block_top_next1 <= TO_UNSIGNED(0, 10);
 	end if;
 	-- Second block
-	if(lane_rhythm2(timer10th_reg)) then
+	if(lane_rhythm2(timer10th_reg) = '1') then
 		block_top_next2 <= TO_UNSIGNED(0, 10);
 	end if;
 	-- Third block
-	if(lane_rhythm3(timer10th_reg)) then
+	if(lane_rhythm3(timer10th_reg) = '1') then
 		block_top_next3 <= TO_UNSIGNED(0, 10);
 	end if;
 
@@ -553,7 +553,7 @@ process(block_top1, block_top2, block_top3, block_speed, refr_tick, block_top_re
 	if(timer60th_reg = 6) then
 		timer60th_next <= 0;
 	end if;
-	if(timer10th_reg = 10) then
+	if(timer10th_reg = 63) then
 		timer10th_next <= 0;
 	end if;
 end process;
