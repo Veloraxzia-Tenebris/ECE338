@@ -44,7 +44,7 @@ entity Top is
       hdmi_vsync : out STD_LOGIC;
       hdmi_enable : out STD_LOGIC;
       led: out STD_LOGIC_VECTOR (1 downto 0);
-      btn: in std_logic_vector(1 downto 0)
+      btn: in std_logic_vector(2 downto 0)
   --    DEBUG_IN: in std_logic;
    --   DEBUG_OUT: out std_logic
       );
@@ -148,7 +148,7 @@ architecture beh of Top is
    pixel_y_2_std <= std_logic_vector(pixel_2_y);
    
    pong_i: entity work.pong_graph_st(rtl)
-      port map (clk=>Clk, reset=>reset, btn=>btn, video_on=>hdmi_enable_out, pixel_x=>pixel_x_std, pixel_y=>pixel_y_std, pixel_2_x => pixel_x_2_std, pixel_2_y => pixel_y_2_std, graph_rgb=>graph_rgb, led => led_out);
+      port map (clk=>Clk, reset=>reset, btn=>btn, video_on=>hdmi_enable_out, pixel_x=>pixel_x_std, pixel_y=>pixel_y_std, graph_rgb=>graph_rgb);
 --    hdmi_red <= std_logic_vector(resize(pixel_x, 8)) when sw_r = '1' else (others => '0');
 --    hdmi_green <= std_logic_vector(resize(pixel_y, 8)) when sw_g = '1' else (others => '0');
    hdmi_red <= "11111111" when graph_rgb(0) = '1' else (others => '0');

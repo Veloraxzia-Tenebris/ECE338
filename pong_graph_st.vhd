@@ -6,7 +6,7 @@ use ieee.numeric_std.all;
 
 entity pong_graph_st is
 	port(clk, reset: in std_logic;
-		btn: in std_logic_vector(1 downto 0);
+		btn: in std_logic_vector(2 downto 0);
 		video_on: in std_logic;
 		pixel_x, pixel_y: in std_logic_vector(9 downto 0);
 		led: out std_logic_vector(1 downto 0);
