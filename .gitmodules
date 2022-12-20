@@ -1,0 +1,3 @@
+[submodule "z7_hdmi_driver"]
+	path = z7_hdmi_driver
+	url = https://github.com/chelmich/z7_hdmi_driver
