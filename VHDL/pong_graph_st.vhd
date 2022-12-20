@@ -38,16 +38,16 @@ signal block_left2, block_right2, block_top2, block_bottom2 : UNSIGNED (9 downto
 --	Third block
 signal block_left3, block_right3, block_top3, block_bottom3 : UNSIGNED (9 downto 0);
 --	Registers for block top and block left
-signal block_left_reg1, block_top_reg1 : UNSIGNED (9 downto 0);
-signal block_left_next1, block_top_next1 : UNSIGNED (9 downto 0);
+signal block_left_reg1, block_left_next1 : UNSIGNED (9 downto 0) := ("0001110000");
+signal block_top_reg1, block_top_next1 : UNSIGNED (9 downto 0) := ("0000000000");
 --	Second block
-signal block_left_reg2, block_top_reg2 : UNSIGNED (9 downto 0);
-signal block_left_next2, block_top_next2 : UNSIGNED (9 downto 0);
+signal block_left_reg2, block_left_next2 : UNSIGNED (9 downto 0) := ("0010100100");
+signal block_top_reg2, block_top_next2 : UNSIGNED (9 downto 0) := ("0000000000");
 --	Third block
-signal block_left_reg3, block_top_reg3 : UNSIGNED (9 downto 0);
-signal block_left_next3, block_top_next3 : UNSIGNED (9 downto 0);
+signal block_left_reg3, block_left_next3 : UNSIGNED (9 downto 0) := ("0011011000");
+signal block_top_reg3, block_top_next3 : UNSIGNED (9 downto 0) := ("0000000000");
 --	Registers for block speed
-signal block_speed : INTEGER := 4;
+signal block_speed : INTEGER := 6;
 --	Block ROM
 type block_type is array (0 to 3) of STD_LOGIC_VECTOR (0 to 31);
 -- Should look like:
@@ -361,7 +361,7 @@ constant DETECT_THICKNESS : INTEGER := 40;
 signal timer60th_reg, timer60th_next : INTEGER := 0;
 --	Counts every 1/10th of a second
 signal timer10th_reg, timer10th_next : INTEGER := 0;
-constant TIMESIX : INTEGER := 6;
+constant TIMESIX : INTEGER := 120;
 constant TIMETEN : INTEGER := 63;
 
 -- Lane lines
@@ -577,7 +577,7 @@ score_pixel <= '1' when (in_score = '1') and (score_bit = '1')
 				  else '0';
 
 -- Set colour to white
-score_rgb <= "111";
+score_rgb <= "100";
 
 -- Display lane
 lane_pixel <= '1' when ((LANE_LEFT <= pix_x) and (pix_x <= (LANE_LEFT + LANE_LINE_THICKNESS))) or
@@ -604,7 +604,7 @@ process(video_on, block_rgb, score_rgb, block_pixel1, block_pixel2, block_pixel3
 		elsif(lane_pixel = '1') then
 			graph_rgb <= lane_rgb;
 		else
-			graph_rgb <= "000";
+			graph_rgb <= "010";
 		end if;
 	end if;
 end process;
